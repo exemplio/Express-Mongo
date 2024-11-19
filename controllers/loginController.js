@@ -16,7 +16,7 @@ class LoginController {
                 });
             });
         } catch (err) {
-            res.status(500).send(err.message);
+            return res.status(500).send(err.message);
         }
     }
 
@@ -40,12 +40,12 @@ class LoginController {
             db.query(`SELECT * FROM estudiantes WHERE id = ?`, [id],
                 (err, rows) => {
                     if (err) {
-                        res.status(400).send(err);
+                        return res.status(400).send(err);
                     }
-                    res.status(200).json(rows[0]);
+                    return res.status(200).json(rows[0]);
                 });
         } catch (err) {
-            res.status(500).send(err.message);
+            return res.status(500).send(err.message);
         }
     }
 
@@ -97,13 +97,13 @@ class LoginController {
             WHERE id = ?;`,
                 [dni, nombre, apellido, email, id], (err, rows) => {
                     if (err) {
-                        res.status(400).send(err);
+                        return res.status(400).send(err);
                     }
                     if (rows.affectedRows == 1)
-                        res.status(200).json({ respuesta: 'Registro actualizado con éxito' });
+                        return res.status(200).json({ respuesta: 'Registro actualizado con éxito' });
                 })
         } catch (err) {
-            res.status(500).send(err.message);
+            return res.status(500).send(err.message);
         }
     }
 
@@ -113,13 +113,13 @@ class LoginController {
             db.query(`DELETE FROM estudiantes WHERE id = ?;`,
                 [id], (err, rows) => {
                     if (err) {
-                        res.status(400).send(err);
+                        return res.status(400).send(err);
                     }
                     if (rows.affectedRows == 1)
-                        res.status(200).json({ respuesta: 'Registro eliminado con éxito' });
+                        return res.status(200).json({ respuesta: 'Registro eliminado con éxito' });
                 })
         } catch (err) {
-            res.status(500).send(err.message);
+            return res.status(500).send(err.message);
         }
     }
 }
