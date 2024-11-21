@@ -2,18 +2,31 @@ import db from '../database/conexion.mjs';
 
 class LoginController {
 
+    async verifyKeySpace(req, res) {
+        const createKeyspaceQuery = `
+        CREATE KEYSPACE IF NOT EXISTS my_keyspace
+        WITH replication = {
+            'class': 'SimpleStrategy',
+            'replication_factor': 1
+        };
+        `;    
+        client.execute(createKeyspaceQuery)
+            .then(() => console.log('Keyspace creado con éxito'))
+            .catch(err => console.error('Error al crear el keyspace', err));
+    }
+    
     async verifyTable(req, res) {
         try {
             return new Promise((resolve, reject) => {
-                const query = "SELECT table_name FROM system_schema.tables WHERE keyspace_name = 'deegle';";
+                const query = "SELECT table_name FROM system_schema.tables WHERE keyspace_name = 'testing';";
                 
                 db.execute(query, [], { prepare: true })
                     .then(result => {
                         const tables = result.rows.map(row => row.table_name);
-                        if (tables.includes('estudiantes')) {
-                            resolve(200); // Tabla 'estudiantes' encontrada
+                        if (tables.includes('users')) {
+                            resolve(200);
                         } else {
-                            resolve(202); // Tabla 'estudiantes' no encontrada
+                            resolve(202);
                         }
                     })
                     .catch(error => {
@@ -27,7 +40,7 @@ class LoginController {
 
     consultar = async (req, res) => {
         try {
-            const query = "SELECT * FROM estudiantes;";
+            const query = "SELECT * FROM users;";
             
             db.execute(query, [], { prepare: true })
                 .then(result => {
@@ -44,7 +57,7 @@ class LoginController {
     consultarDetalle(req, res) {
         const { id } = req.params;
         try {
-            db.query(`SELECT * FROM estudiantes WHERE id = ?`, [id],
+            db.query(`SELECT * FROM users WHERE id = ?`, [id],
                 (err, rows) => {
                     if (err) {
                         return res.status(400).send(err);
@@ -66,7 +79,7 @@ class LoginController {
     
             this.verifyTable(req, res).then((response) => {
                 if (response === 200) {
-                    const insertQuery = "INSERT INTO estudiantes (id, dni, nombre, apellido, email) VALUES (uuid(), ?, ?, ?, ?);";
+                    const insertQuery = "INSERT INTO users (id, dni, nombre, apellido, email) VALUES (uuid(), ?, ?, ?, ?);";
                     
                     db.execute(insertQuery, [dni, nombre, apellido, email], { prepare: true })
                         .then(result => {
@@ -76,7 +89,7 @@ class LoginController {
                             return res.status(400).send(error);
                         });
                 } else {
-                    const createTableQuery = `CREATE TABLE IF NOT EXISTS estudiantes (
+                    const createTableQuery = `CREATE TABLE IF NOT EXISTS users (
                         id UUID PRIMARY KEY,
                         dni INT,
                         nombre TEXT,
@@ -86,10 +99,10 @@ class LoginController {
     
                     db.execute(createTableQuery, [], { prepare: true })
                         .then(result => {
-                            return res.status(200).send({ success: "Tabla de estudiantes creada con éxito" });
+                            return res.status(200).send({ success: "Tabla de usuarios creada con éxito" });
                         })
                         .catch(error => {
-                            return res.status(500).send({ error: "Error al crear tabla de estudiantes", details: error });
+                            return res.status(500).send({ error: "Error al crear tabla de usuarios", details: error });
                         });
                 }
             });
@@ -98,29 +111,25 @@ class LoginController {
         }
     };
 
-    actualizar(req, res) {
-        const { id } = req.params;
+    actualizar = async (req, res) => {
+        const { id, dni, nombre, apellido, email } = req.body;
+    
+        const query = `UPDATE users
+                       SET dni = ?, nombre = ?, apellido = ?, email = ?
+                       WHERE id = ?;`;
+    
         try {
-            const { dni, nombre, apellido, email } = req.body;
-            db.query(`UPDATE estudiantes
-            SET dni = ?, nombre = ?, apellido = ?, email = ?
-            WHERE id = ?;`,
-                [dni, nombre, apellido, email, id], (err, rows) => {
-                    if (err) {
-                        return res.status(400).send(err);
-                    }
-                    if (rows.affectedRows == 1)
-                        return res.status(200).json({ respuesta: 'Registro actualizado con éxito' });
-                })
+            await client.execute(query, [dni, nombre, apellido, email, id]);
+            res.status(200).json({ respuesta: 'Registro actualizado con éxito' });
         } catch (err) {
-            return res.status(500).send(err.message);
+            res.status(500).send(err.message);
         }
     }
 
     borrar(req, res) {
         const { id } = req.params;
         try {
-            db.query(`DELETE FROM estudiantes WHERE id = ?;`,
+            db.query(`DELETE FROM users WHERE id = ?;`,
                 [id], (err, rows) => {
                     if (err) {
                         return res.status(400).send(err);
