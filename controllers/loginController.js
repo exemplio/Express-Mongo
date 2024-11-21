@@ -2,37 +2,44 @@ import db from '../database/conexion.mjs';
 
 class LoginController {
 
-    async verifyTable(req,res){
+    async verifyTable(req, res) {
         try {
             return new Promise((resolve, reject) => {
-                db.query("SHOW TABLES", function (error, results, fields) {
-                if (error) throw error;      
-                    const tables = results.map(result => result.Tables_in_testing);
-                    if (tables.includes('estudiantes')) {
-                        resolve(200);
-                    } else {
-                        resolve(202);
-                    }
-                });
+                const query = "SELECT table_name FROM system_schema.tables WHERE keyspace_name = 'deegle';";
+                
+                db.execute(query, [], { prepare: true })
+                    .then(result => {
+                        const tables = result.rows.map(row => row.table_name);
+                        if (tables.includes('estudiantes')) {
+                            resolve(200); // Tabla 'estudiantes' encontrada
+                        } else {
+                            resolve(202); // Tabla 'estudiantes' no encontrada
+                        }
+                    })
+                    .catch(error => {
+                        reject(error);
+                    });
             });
         } catch (err) {
             return res.status(500).send(err.message);
         }
     }
 
-    consultar(req, res) {
+    consultar = async (req, res) => {
         try {
-            db.query(`SELECT * FROM estudiantes`,
-                (err, rows) => {
-                    if (err) {
-                        return res.status(400).send(err);
-                    }
-                    return res.status(200).json(rows);
+            const query = "SELECT * FROM estudiantes;";
+            
+            db.execute(query, [], { prepare: true })
+                .then(result => {
+                    return res.status(200).json(result.rows);
+                })
+                .catch(error => {
+                    return res.status(400).send(error);
                 });
         } catch (err) {
             return res.status(500).send(err.message);
         }
-    }
+    };
 
     consultarDetalle(req, res) {
         const { id } = req.params;
@@ -49,44 +56,47 @@ class LoginController {
         }
     }
 
-    ingresar= (req, res) => {
+    ingresar = async (req, res) => {
         try {
             const { dni, nombre, apellido, email } = req.body;
+            
             if (!dni || !nombre || !apellido || !email) {
                 return res.status(400).json({ error: 'Todos los campos son requeridos.' });
             }
-            this.verifyTable(req,res).then((response)=>{
-                if (response==200) {
-                    db.query(`INSERT INTO estudiantes
-                                (id, dni, nombre, apellido, email)
-                                VALUES(NULL, ?, ?, ?, ?);`,
-                        [dni, nombre, apellido, email], (err, rows) => {
-                            if (err) {
-                                return res.status(400).send(err);                        
-                            }
-                            if (rows.insertId)
-                                return res.status(201).json(rows);                        
-                    });
-                }else{
-                    const createTableQuery = ` CREATE TABLE Estudiantes (
-                      id INT AUTO_INCREMENT PRIMARY KEY,
-                      dni INT NOT NULL,
-                      nombre VARCHAR(50) NOT NULL,
-                      apellido VARCHAR(50) NOT NULL,
-                      email VARCHAR(50) NOT NULL)`;
-                    db.query(createTableQuery, (error, results, fields) => {
-                        if (error) {
-                            return res.status(200).send({err:"Error al crear tabla de estudiantes"});
-                        } else {
-                            return res.status(200).send({success:"Tabla de estudiantes creada con éxito"});
-                        }
-                      });
+    
+            this.verifyTable(req, res).then((response) => {
+                if (response === 200) {
+                    const insertQuery = "INSERT INTO estudiantes (id, dni, nombre, apellido, email) VALUES (uuid(), ?, ?, ?, ?);";
+                    
+                    db.execute(insertQuery, [dni, nombre, apellido, email], { prepare: true })
+                        .then(result => {
+                            return res.status(201).json(result);
+                        })
+                        .catch(error => {
+                            return res.status(400).send(error);
+                        });
+                } else {
+                    const createTableQuery = `CREATE TABLE IF NOT EXISTS estudiantes (
+                        id UUID PRIMARY KEY,
+                        dni INT,
+                        nombre TEXT,
+                        apellido TEXT,
+                        email TEXT
+                    );`;
+    
+                    db.execute(createTableQuery, [], { prepare: true })
+                        .then(result => {
+                            return res.status(200).send({ success: "Tabla de estudiantes creada con éxito" });
+                        })
+                        .catch(error => {
+                            return res.status(500).send({ error: "Error al crear tabla de estudiantes", details: error });
+                        });
                 }
-            })
+            });
         } catch (err) {
-            return res.status(500).send(err.message);            
+            return res.status(500).send(err.message);
         }
-    }
+    };
 
     actualizar(req, res) {
         const { id } = req.params;
