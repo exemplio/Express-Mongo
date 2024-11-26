@@ -13,7 +13,7 @@ app.get('/', (req, res) => {
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
-app.use("/estudiantes", loginRoutes);
+app.use("/users", loginRoutes);
 
 app.listen(6500, () => {
     console.log('Servidor activo');
