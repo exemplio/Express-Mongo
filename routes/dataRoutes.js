@@ -1,10 +1,6 @@
-import { Router } from 'express';
-const router = Router();
-import loginController from '../controllers/loginController.js';
-
-router.get('/', loginController.consultar);
-
-router.post('/', loginController.ingresar);
+import express from 'express';
+const router = express.Router();
+import dataController from '../controllers/dataController.js';
 
 /**
  * @swagger
@@ -55,10 +51,16 @@ router.post('/', loginController.ingresar);
  *       404:
  *         description: No se encontró el estudiante con el ID especificado para eliminar.
  */
+
+
+router.get('/', dataController.consultar);
+
+router.post('/', dataController.ingresar);
+
 router.route("/:id")
-    .get(loginController.consultarDetalle)
-    .put(loginController.actualizar)
-    .delete(loginController.borrar);
+    .get(dataController.consultarDetalle)
+    .put(dataController.actualizar)
+    .delete(dataController.borrar);
 
 
 export default router;

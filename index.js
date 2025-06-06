@@ -1,21 +1,24 @@
-import express, { json } from 'express';
+import express from 'express';
 import cors from 'cors';
+import connectDB from './database/conexion.mjs';
+import 'dotenv/config';
+import dataRouter from './routes/dataRoutes.js';
+
 const app = express();
-import { swaggerUi, specs } from './swaggerConfig.js';
 
-import loginRoutes from './routes/loginRoutes.js';
-
-app.use(json());
 app.use(cors());
-app.get('/', (req, res) => {
-    res.send('Hola mundo');
+app.use(express.json());
+
+connectDB();
+
+app.use('/api/data', dataRouter);
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Internal Server Error' });
 });
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
-
-app.use("/users", loginRoutes);
-
-app.listen(6500, () => {
-    console.log('Servidor activo');
-    console.log(`http://localhost:${6500}`);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });

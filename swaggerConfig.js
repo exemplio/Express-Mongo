@@ -10,7 +10,7 @@ const options = {
             description: 'Documentación de la API de tu proyecto Node.js',
         },
     },
-    apis: ['./routes/loginRoutes.js'], // Ruta al archivo donde están definidas tus rutas
+    apis: ['./routes/dataRoutes.js'], // Ruta al archivo donde están definidas tus rutas
 };
 
 const specs = swaggerJsdoc(options);

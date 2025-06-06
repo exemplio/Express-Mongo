@@ -1,17 +1,19 @@
-import mysql from 'mysql2';
+import mongoose from 'mongoose';
+import 'dotenv/config';
 
-const db = mysql.createConnection({
-    host: '127.0.0.1',
-    user: 'root',
-    password: '',
-    database: 'testing',
-});
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_ATLAS_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000,
+      maxPoolSize: 50
+    });        
 
-db.connect((err) => {
-    if (err) {
-        throw err;
-    }
-    console.log('Base de datos conectada');
-});
+  } catch (err) {
+    console.error('Database connection error:', err);
+    process.exit(1);
+  }
+};
 
-export default db;
+export default connectDB;
