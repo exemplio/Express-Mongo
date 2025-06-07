@@ -2,65 +2,82 @@ import express from 'express';
 const router = express.Router();
 import dataController from '../controllers/dataController.js';
 
+router.get('/', dataController.getAll);
+
 /**
  * @swagger
- * /estudiantes/{id}:
+ * /api/data:
  *   get:
- *     summary: Obtiene un estudiante por ID
- *     description: Retorna un estudiante basado en su ID.
- *     parameters:
- *       - in: path
- *         name: id
- *         description: ID del estudiante
- *         required: true
- *         schema:
- *           type: integer
+ *     summary: Obtiene la data
+ *     description: Retorna toda la data.
  *     responses:
  *       200:
- *         description: Petición exitosa. Devuelve el estudiante especificado.
+ *         description: Petición exitosa. Devuelve la data especificado.
  *       404:
- *         description: No se encontró el estudiante con el ID especificado.
- *   put:
- *     summary: Actualiza un estudiante por ID
- *     description: Actualiza la información de un estudiante basado en su ID.
- *     parameters:
- *       - in: path
- *         name: id
- *         description: ID del estudiante
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Petición exitosa. Estudiante actualizado correctamente.
- *       404:
- *         description: No se encontró el estudiante con el ID especificado para actualizar.
- *   delete:
- *     summary: Borra un estudiante por ID
- *     description: Elimina un estudiante basado en su ID.
- *     parameters:
- *       - in: path
- *         name: id
- *         description: ID del estudiante
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Petición exitosa. Estudiante eliminado correctamente.
- *       404:
- *         description: No se encontró el estudiante con el ID especificado para eliminar.
+ *         description: No se encontró la data.
  */
 
+router.post('/', dataController.addPost);
 
-router.get('/', dataController.consultar);
-
-router.post('/', dataController.ingresar);
+/**
+ * @swagger
+ * /api/data:
+ *   post:
+ *     summary: Create a new user
+ *     description: Creates a new user with the provided data.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         description: ID de la data
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Petición exitosa. Data agregada.
+ *       404:
+ *         description: No se pudo ingresar la dara.
+ */
 
 router.route("/:id")
-    .get(dataController.consultarDetalle)
-    .put(dataController.actualizar)
-    .delete(dataController.borrar);
+    .put(dataController.update)
+    .delete(dataController.delete);
+
+/**
+ * @swagger
+ * /api/data:
+ *   put:
+ *     summary: Actualiza data por ID
+ *     description: Actualiza la data basado en su ID.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         description: ID de la data
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Petición exitosa. Data actualizada correctamente.
+ *       404:
+ *         description: No se encontró la data con el ID especificado para actualizar.
+ *   delete:
+ *     summary: Borra data por ID
+ *     description: Elimina data basado en su ID.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         description: ID de la data
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Petición exitosa. Data eliminada correctamente.
+ *       404:
+ *         description: No se encontró la data con el ID especificado para eliminar.
+ */
+
 
 
 export default router;

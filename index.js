@@ -3,6 +3,7 @@ import cors from 'cors';
 import connectDB from './database/conexion.mjs';
 import 'dotenv/config';
 import dataRouter from './routes/dataRoutes.js';
+import { swaggerUi, specs } from './swaggerConfig.js';
 
 const app = express();
 
@@ -13,6 +14,8 @@ connectDB();
 
 app.use('/api/data', dataRouter);
 
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Internal Server Error' });
@@ -20,5 +23,5 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on port http://localhost:${PORT}`);
 });
