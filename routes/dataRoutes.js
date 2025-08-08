@@ -78,6 +78,44 @@ router.route("/:id")
  *         description: No se encontró la data con el ID especificado para eliminar.
  */
 
+router.route("/firebase-login")
+    .post(dataController.firebaseLogin)
+
+/**
+ * @swagger
+ * /api/data:
+ *   put:
+ *     summary: Iniciar sesion
+ *     description: Inicia sesion con el email y password proporcionados.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         description: ID de la data
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Petición exitosa. Data actualizada correctamente.
+ *       404:
+ *         description: No se encontró la data con el ID especificado para actualizar.
+ *   delete:
+ *     summary: Borra data por ID
+ *     description: Elimina data basado en su ID.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         description: ID de la data
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Petición exitosa. Data eliminada correctamente.
+ *       404:
+ *         description: No se encontró la data con el ID especificado para eliminar.
+ */
+
 
 
 export default router;

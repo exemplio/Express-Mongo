@@ -1,7 +1,58 @@
 import movieSchema from '../models/MovieModel.js';
+import userSchema from '../models/UserModel.js';
 import mongoose from 'mongoose';
 
 class DataController {
+    constructor() {
+        this.firebaseLogin = this.firebaseLogin.bind(this);
+        this.insertUserIfNotExists = this.insertUserIfNotExists.bind(this);
+    }
+    async firebaseLogin(req, res) {
+        const { email, password } = req.body;
+        const url = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyCNGkGWhHJU8vSBEY37RYnDxTTQAC4sk-k";
+        const payload = {
+            email,
+            password,
+            returnSecureToken: true
+        };
+        try {
+            const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+            return res.status(400).json(data);
+            }
+            if (response.status == 200) {
+                const { idToken, email } = data;
+                const user = await this.insertUserIfNotExists(idToken, email);
+                return res.status(200).json(user);
+            }
+            return res.json(data);
+        } catch (err) {
+            return res.status(500).json({ error: "Internal Server Error", details: err.toString() });
+        }
+    };
+
+    async insertUserIfNotExists(localId, email) {
+        try {
+            let user = await userSchema.findOne({ email });            
+            if (!user) {
+                user = new userSchema({ localId, email });
+                user = await user.save();
+            }else{
+                return { status: 200, message: "User already exists" };
+            }
+            return user;
+        } catch (error) {
+            console.error('Error inserting user:', error);
+            throw error;
+        }
+    }
 
     async getAll(req, res) {
         try {
@@ -95,19 +146,15 @@ class DataController {
             });
 
         } catch (error) {
-            console.error('Update error:', error);
-            
-            // Handle validation errors
+            console.error('Update error:', error);            
             if (error.name === 'ValidationError') {
-            const errors = Object.values(error.errors).map(el => el.message);
-            return res.status(400).json({
-                success: false,
-                error: 'Validation failed',
-                details: errors
-            });
+                const errors = Object.values(error.errors).map(el => el.message);
+                return res.status(400).json({
+                    success: false,
+                    error: 'Validation failed',
+                    details: errors
+                });
             }
-            
-            // Handle CastError (invalid ID format)
             if (error.name === 'CastError') {
             return res.status(400).json({
                 success: false,
