@@ -3,6 +3,7 @@ import movieSchema from '../models/MovieModel.js';
 import userSchema from '../models/UserModel.js';
 import Chat from '../models/ChatModel.js';
 import Message from '../models/MessageModel.js';
+import ClientSchema from '../models/ClientModel.js';
 
 class DataController {
     constructor() {
@@ -23,18 +24,23 @@ class DataController {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
             });
-
             const data = await response.json();
-
             if (!response.ok) {
-            return res.status(400).json(data);
+                return res.status(400).json(data);
             }
             if (response.status == 200) {
-                const { idToken, email } = data;
-                const user = await this.insertUserIfNotExists(idToken, email);
-                return res.status(200).json(user);
+                let query = { email: data?.email };
+                await ClientSchema.find(query).then(async (existingClient) => {
+                    if (existingClient.length > 0) {
+                        existingClient = existingClient[0];
+                        console.log("Client found:", existingClient);
+                        const client = ClientSchema(existingClient);
+                        return res.status(200).json(client);
+                    } else {
+                        return res.status(202).json({ message: "Client not found" });
+                    }
+                });
             }
-            return res.json(data);
         } catch (err) {
             return res.status(500).json({ error: "Internal Server Error", details: err.toString() });
         }
@@ -112,12 +118,12 @@ class DataController {
         const sortOptions = { [sortKey]: sortDir };
 
         const [clients, total] = await Promise.all([
-            Client.find(query)
+            ClientSchema.find(query)
             .sort(sortOptions)
             .skip((pageNum - 1) * limitNum)
             .limit(limitNum)
             .lean(),
-            Client.countDocuments(query),
+            ClientSchema.countDocuments(query),
         ]);
 
         res.json({
@@ -131,30 +137,31 @@ class DataController {
             },
         });
         } catch (err) {
-        console.error('Error fetching clients:', err);
-        res.status(500).json({ success: false, error: 'Server Error' });
+            console.error('Error fetching clients:', err);
+            res.status(500).json({ success: false, error: 'Server Error' });
         }
     }
 
     async createClient(req, res) {
         try {
-            const { username, email, displayName, avatar } = req.body || {};
+            const { username, email, displayName, avatar, userId } = req.body || {};
             if (!username || !email) {
-            return res.status(400).json({ success: false, message: 'username and email are required' });
+                return res.status(400).json({ success: false, message: 'username and email are required' });
             }
-            const client = new Client({
-            username: String(username).trim(),
-            email: String(email).trim().toLowerCase(),
-            displayName: displayName ? String(displayName).trim() : undefined,
-            avatar: avatar ? String(avatar).trim() : undefined,
+            const client = new ClientSchema({
+                username: String(username).trim(),
+                userId: String(userId).trim().toLowerCase(),
+                email: String(email).trim().toLowerCase(),
+                displayName: displayName ? String(displayName).trim() : undefined,
+                avatar: avatar ? String(avatar).trim() : undefined,
             });
 
             const saved = await client.save();
             return res.status(201).json({ success: true, data: saved });
         } catch (err) {
             if (err && err.code === 11000) {
-            const field = Object.keys(err.keyValue || {})[0] || 'field';
-            return res.status(409).json({ success: false, message: `Duplicate ${field}: already exists` });
+                const field = Object.keys(err.keyValue || {})[0] || 'field';
+                return res.status(409).json({ success: false, message: `Duplicate ${field}: already exists` });
             }
             if (err && err.name === 'ValidationError') {
             const errors = Object.fromEntries(

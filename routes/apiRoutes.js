@@ -17,14 +17,14 @@ router.get('/', dataController.getClients);
  *         description: No se encontró la data.
  */
 
-router.post('/', dataController.createClient);
+router.post('/create-client', dataController.createClient);
 
 /**
  * @swagger
- * /api:
+ * /api/create-client:
  *   post:
- *     summary: Create a new user
- *     description: Creates a new user with the provided data.
+ *     summary: Create a new client
+ *     description: Creates a new client with the provided data.
  *     parameters:
  *       - in: path
  *         name: id
