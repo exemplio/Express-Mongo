@@ -33,10 +33,9 @@ export function initChatWebSocket(server) {
       try {
         const msg = JSON.parse(data.toString());
         if (msg?.type === 'message') {
-          const { chat, sender = '', username, content } = msg || {};
-          if (!username || !content) return;
-          console.log(`Saving message from ${username}: ${content}`);
-          const message = new Message({ chat, sender, username, content });
+          const { chat, sender = '', username, content, receiver } = msg || {};
+          if (!username || !content || !receiver) return ws.send(JSON.stringify({ type: 'error', payload: 'Invalid message format' }));          
+          const message = new Message({ chat, sender, username, content, receiver });
           await message.save();
           const outgoing = {
             type: 'message',

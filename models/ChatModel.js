@@ -12,7 +12,7 @@ const chatSchema = new mongoose.Schema({
     }
   },
   createdAt: { type: Date, default: Date.now },
-  lastMessage: { type: mongoose.Schema.Types.ObjectId, ref: 'Message' }
+  lastMessage: { type: String, ref: 'Message', required: true }
 });
 
 module.exports = mongoose.model('Chat', chatSchema);
