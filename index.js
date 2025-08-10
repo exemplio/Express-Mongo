@@ -12,9 +12,9 @@ app.use(express.json());
 
 connectDB();
 
-app.use('/api/data', dataRouter);
+app.use('/api', dataRouter);
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+app.use('/swagger', swaggerUi.serve, swaggerUi.setup(specs));
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

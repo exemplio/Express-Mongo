@@ -1,10 +1,12 @@
-import movieSchema from '../models/MovieModel.js';
-import userSchema from '../models/UserModel.js';
 import mongoose from 'mongoose';
+import movieSchema from '../models/MovieModel.js';
+import userSchema from '../models/ClientModel.js';
+import Chat from '../models/ChatModel.js';
+import Message from '../models/MessageModel.js';
+import UserModel from '../models/UserModel.js';
 
 class DataController {
     constructor() {
-        this.firebaseLogin = this.firebaseLogin.bind(this);
         this.insertUserIfNotExists = this.insertUserIfNotExists.bind(this);
     }
     async firebaseLogin(req, res) {
@@ -111,7 +113,7 @@ class DataController {
         }
     }
 
-    addPost= async (req, res) => {
+    async addPost(req, res) {
         try {
             const product = new movieSchema(req.body);            
             const savedProduct = await product.save();            
@@ -191,6 +193,55 @@ class DataController {
             return res.status(500).send(err.message);
         }
     }
+
+    async createChat (req, res) {
+        try {
+            const { members, name, isGroup } = req.body;
+            const chat = new Chat({ members, name, isGroup });
+            await chat.save();
+            res.status(201).json(chat);
+        } catch (err) {
+            res.status(400).json({ error: err.message });
+        }
+    }
+
+    async listChats(req, res) {
+        try {
+            const chats = await Chat.find({ members: req.params.userId }).populate('members', 'username displayName');
+            res.json(chats);
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    }
+
+    async sendMessage(req, res) {
+        try {
+            const { chatId, senderId, content } = req.body;
+            console.log(req.body);
+            
+            console.log(`Sending message to chat ${chatId} from user ${senderId}: ${content}`);
+            
+            const message = new Message({ chat: chatId, sender: senderId, content });
+            await message.save();
+
+            await Chat.findByIdAndUpdate(chatId, { lastMessage: message._id });
+
+            res.status(201).json(message);
+        } catch (err) {
+            res.status(400).json({ error: err.message });
+        }
+    }
+
+    async getMessages(req, res) {
+        try {
+            const messages = await Message.find({ chat: req.params.chatId })
+                .populate('sender', 'username displayName');
+            res.json(messages);
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    }
 }
+
 
 export default new DataController();
