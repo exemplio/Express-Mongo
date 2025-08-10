@@ -1,8 +1,8 @@
 import express from 'express';
 const router = express.Router();
-import dataController from '../controllers/dataController.js';
+import dataController from '../controllers/apiController.js';
 
-router.get('/', dataController.getAll);
+router.get('/', dataController.getClients);
 
 /**
  * @swagger
@@ -17,7 +17,7 @@ router.get('/', dataController.getAll);
  *         description: No se encontró la data.
  */
 
-router.post('/', dataController.addPost);
+router.post('/', dataController.createClient);
 
 /**
  * @swagger
@@ -78,12 +78,12 @@ router.route("/:id")
  *         description: No se encontró la data con el ID especificado para eliminar.
  */
 
-router.route("/firebase-login")
-    .post(dataController.firebaseLogin)
+router.route("/login/passwordGrant")
+    .post(dataController.login)
 
 /**
  * @swagger
- * /api/firebase-login:
+ * /api/login:
  *   put:
  *     summary: Iniciar sesion
  *     description: Inicia sesion con el email y password proporcionados.
@@ -133,31 +133,25 @@ router.route("/create-chat")
  *         description: No se encontró la data con el ID especificado para actualizar.
  */
 
-router.route("/send-message")
-    .post(dataController.sendMessage);
+router.route("/list-chats")
+    .post(dataController.listChats);
 
 /**
  * @swagger
- * /api/send-message:
+ * /api/list-chats:
  *   post:
- *     summary: Enviar un mensaje
- *     description: Envía un nuevo mensaje en el chat especificado.
+ *     summary: Listar chats
+ *     description: Obtiene la lista de chats del usuario especificado.
  *     parameters:
  *       - in: body
- *         name: message
- *         description: Datos del mensaje a enviar.
+ *         name: userId
+ *         description: ID del usuario para obtener sus chats.
  *         required: true
  *         schema:
  *          type: object
  *          properties:
- *            chat:
+ *            userId:
  *              type: string
- *            sender:
- *              type: string
- *            content:
- *             type: string
- *            readBy:
- *             type: array
  *            createdAt:
  *              type: string
  *              format: date-time
@@ -167,7 +161,6 @@ router.route("/send-message")
  *       404:
  *         description: No se pudo enviar el mensaje.
  */
-
 
 
 

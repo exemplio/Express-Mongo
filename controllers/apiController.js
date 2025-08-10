@@ -1,15 +1,14 @@
 import mongoose from 'mongoose';
 import movieSchema from '../models/MovieModel.js';
-import userSchema from '../models/ClientModel.js';
+import userSchema from '../models/UserModel.js';
 import Chat from '../models/ChatModel.js';
 import Message from '../models/MessageModel.js';
-import UserModel from '../models/UserModel.js';
 
 class DataController {
     constructor() {
         this.insertUserIfNotExists = this.insertUserIfNotExists.bind(this);
     }
-    async firebaseLogin(req, res) {
+    async login(req, res) {
         const { email, password } = req.body;
         const url = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyCNGkGWhHJU8vSBEY37RYnDxTTQAC4sk-k";
         const payload = {
@@ -40,11 +39,11 @@ class DataController {
         }
     };
 
-    async insertUserIfNotExists(localId, email) {
+    async insertUserIfNotExists(userId, email) {
         try {
             let user = await userSchema.findOne({ email });            
             if (!user) {
-                user = new userSchema({ localId, email });
+                user = new userSchema({ userId, email });
                 user = await user.save();
             }else{
                 return { status: 200, message: "User already exists" };
@@ -56,70 +55,115 @@ class DataController {
         }
     }
 
-    async getAll(req, res) {
+    async getClients(req, res) {
         try {
-            const { 
-            page = 1, 
-            limit = 10, 
-            title, 
-            year, 
-            genre, 
-            minRating,
-            sortBy = 'year',
-            sortOrder = 'desc' 
-            } = req.query;
+        const {
+            page = '1',
+            limit = '10',
+            q,
+            username,
+            displayName,
+            email,
+            createdAfter,
+            createdBefore,
+            sortBy = 'createdAt',
+            sortOrder = 'desc',
+        } = req.query;
 
-            const query = {};
-            
-            if (title) query.title = new RegExp(title, 'i');
-            if (year) query.year = year;
-            if (genre) query.genres = genre;
-            if (minRating) query['imdb.rating'] = { $gte: parseFloat(minRating) };
+        const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+        const limitNum = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 100);
 
-            const searchQuery = {
-                $text: {
-                    $search: title,
-                    $caseSensitive: false,
-                    $diacriticSensitive: false
-                }
-            };
+        const query = {};
 
-            const sortOptions = {};
-            sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+        // Field-specific filters (case-insensitive)
+        if (username) query.username = new RegExp(username, 'i');
+        if (displayName) query.displayName = new RegExp(displayName, 'i');
+        if (email) query.email = new RegExp(email, 'i');
 
-            const [movies, total] = await Promise.all([
-            movieSchema.find(query)
-                .sort(sortOptions)
-                .skip((page - 1) * limit)
-                .limit(parseInt(limit))
-                .lean(),
-            movieSchema.countDocuments(query)
-            ]);
+        // CreatedAt range filters
+        if (createdAfter || createdBefore) {
+            const range = {};
+            if (createdAfter) {
+            const d = new Date(createdAfter);
+            if (!Number.isNaN(d.getTime())) range.$gte = d;
+            }
+            if (createdBefore) {
+            const d = new Date(createdBefore);
+            if (!Number.isNaN(d.getTime())) range.$lte = d;
+            }
+            if (Object.keys(range).length) query.createdAt = range;
+        }
 
-            res.json({
-                success: true,
-                data: movies,
-                pagination: {
-                    page: parseInt(page),
-                    limit: parseInt(limit),
-                    total,
-                    pages: Math.ceil(total / limit)
-                }
-            });
+        // Generic search across multiple fields
+        if (q) {
+            const regex = new RegExp(q, 'i');
+            query.$or = [
+            { username: regex },
+            { displayName: regex },
+            { email: regex },
+            ];
+        }
 
+        // Sorting
+        const allowedSort = new Set(['createdAt', 'username', 'email', 'displayName']);
+        const sortKey = allowedSort.has(sortBy) ? sortBy : 'createdAt';
+        const sortDir = sortOrder === 'asc' ? 1 : -1;
+        const sortOptions = { [sortKey]: sortDir };
+
+        const [clients, total] = await Promise.all([
+            Client.find(query)
+            .sort(sortOptions)
+            .skip((pageNum - 1) * limitNum)
+            .limit(limitNum)
+            .lean(),
+            Client.countDocuments(query),
+        ]);
+
+        res.json({
+            success: true,
+            data: clients,
+            pagination: {
+            page: pageNum,
+            limit: limitNum,
+            total,
+            pages: Math.ceil(total / limitNum),
+            },
+        });
         } catch (err) {
-            console.error('Error fetching movies:', err);
-            res.status(500).json({ success: false, error: 'Server Error' });
+        console.error('Error fetching clients:', err);
+        res.status(500).json({ success: false, error: 'Server Error' });
         }
     }
 
-    async addPost(req, res) {
+    async createClient(req, res) {
         try {
-            const product = new movieSchema(req.body);            
-            const savedProduct = await product.save();            
-            res.status(201).json(savedProduct);
+            const { username, email, displayName, avatar } = req.body || {};
+            if (!username || !email) {
+            return res.status(400).json({ success: false, message: 'username and email are required' });
+            }
+            const client = new Client({
+            username: String(username).trim(),
+            email: String(email).trim().toLowerCase(),
+            displayName: displayName ? String(displayName).trim() : undefined,
+            avatar: avatar ? String(avatar).trim() : undefined,
+            });
+
+            const saved = await client.save();
+            return res.status(201).json({ success: true, data: saved });
         } catch (err) {
-            return res.status(500).send(err.message);            
+            if (err && err.code === 11000) {
+            const field = Object.keys(err.keyValue || {})[0] || 'field';
+            return res.status(409).json({ success: false, message: `Duplicate ${field}: already exists` });
+            }
+            if (err && err.name === 'ValidationError') {
+            const errors = Object.fromEntries(
+                Object.entries(err.errors).map(([k, v]) => [k, v.message])
+            );
+            return res.status(400).json({ success: false, message: 'Validation failed', errors });
+            }
+
+            console.error('Error creating client:', err);
+            return res.status(500).json({ success: false, message: 'Server Error' });
         }
     }
 
@@ -199,7 +243,7 @@ class DataController {
             const { members, name, isGroup } = req.body;
             const chat = new Chat({ members, name, isGroup });
             await chat.save();
-            res.status(201).json(chat);
+            res.status(200).json(chat);
         } catch (err) {
             res.status(400).json({ error: err.message });
         }
@@ -216,16 +260,11 @@ class DataController {
 
     async sendMessage(req, res) {
         try {
-            const { chatId, senderId, content } = req.body;
-            console.log(req.body);
-            
+            const { chatId, senderId, content } = req.body;            
             console.log(`Sending message to chat ${chatId} from user ${senderId}: ${content}`);
-            
             const message = new Message({ chat: chatId, sender: senderId, content });
             await message.save();
-
             await Chat.findByIdAndUpdate(chatId, { lastMessage: message._id });
-
             res.status(201).json(message);
         } catch (err) {
             res.status(400).json({ error: err.message });
