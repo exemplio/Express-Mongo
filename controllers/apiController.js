@@ -6,6 +6,7 @@ import Message from '../models/MessageModel.js';
 
 class DataController {
     constructor() {
+        this.login = this.login.bind(this);
         this.insertUserIfNotExists = this.insertUserIfNotExists.bind(this);
     }
     async login(req, res) {

@@ -9,19 +9,11 @@ import { swaggerUi, specs } from './swaggerConfig.js';
 import { initChatWebSocket } from './routes/webSocket.js';
 
 const app = express();
-
-// Middleware
 app.use(cors());
 app.use(express.json());
-
-// DB
 connectDB();
-
-// Routes
 app.use('/api', dataRouter);
 app.get('/ping', (_req, res) => res.send('pong'));
-
-// Swagger
 app.use('/swagger', swaggerUi.serve, swaggerUi.setup(specs));
 
 // Error handler
