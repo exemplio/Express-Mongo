@@ -33,8 +33,13 @@ class DataController {
                 await ClientSchema.find(query).then(async (existingClient) => {
                     if (existingClient.length > 0) {
                         existingClient = existingClient[0];
-                        console.log("Client found:", existingClient);
-                        const client = ClientSchema(existingClient);
+                        const client = ClientSchema({
+                            username: existingClient.username,
+                            userId: existingClient.userId,
+                            displayName: existingClient.displayName,
+                            email: existingClient.email,
+                            avatar: existingClient.avatar
+                        });
                         return res.status(200).json(client);
                     } else {
                         return res.status(202).json({ message: "Client not found" });
