@@ -288,8 +288,17 @@ class DataController {
 
     async getMessages(req, res) {
         try {
-            const messages = await MessageSchema.find({ chat: req.params.chatId })
-                .populate('sender', 'username displayName');
+            const { chatId } = req.query;
+
+            if (!chatId || !mongoose.Types.ObjectId.isValid(String(chatId))) {
+                return res.status(400).json({ error: 'Invalid or missing chatId' });
+            }
+
+            const messages = await MessageSchema.find({ chat: chatId })
+            .populate('sender', 'username displayName')
+            .lean()
+            .exec();
+
             res.json(messages);
         } catch (err) {
             res.status(500).json({ error: err.message });

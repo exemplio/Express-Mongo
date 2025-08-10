@@ -162,6 +162,35 @@ router.route("/list-chats")
  *         description: No se pudo enviar el mensaje.
  */
 
+router.route("/get-messages")
+    .get(dataController.getMessages);
+
+/**
+ * @swagger
+ * /api/get-messages:
+ *   get:
+ *     summary: Obtener mensajes
+ *     description: Obtiene los mensajes de un chat específico.
+ *     parameters:
+ *       - in: body
+ *         name: chatId
+ *         description: ID del chat para obtener sus mensajes.
+ *         required: true
+ *         schema:
+ *          type: object
+ *          properties:
+ *            userId:
+ *              type: string
+ *            createdAt:
+ *              type: string
+ *              format: date-time
+ *     responses:
+ *       200:
+ *         description: Petición exitosa. Mensaje enviado correctamente.
+ *       404:
+ *         description: No se pudo enviar el mensaje.
+ */
+
 
 
 
