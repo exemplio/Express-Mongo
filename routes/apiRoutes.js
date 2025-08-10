@@ -2,7 +2,7 @@ import express from 'express';
 const router = express.Router();
 import dataController from '../controllers/apiController.js';
 
-router.get('/', dataController.getClients);
+router.get('/get-clients', dataController.getClients);
 
 /**
  * @swagger
