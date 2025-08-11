@@ -294,10 +294,12 @@ class DataController {
                 return res.status(400).json({ error: 'Invalid or missing chatId' });
             }
 
-            const messages = await MessageSchema.find({ chat: chatId })
-            .populate('sender', 'username displayName')
+            const raw = await MessageSchema.find({ chat: chatId })
+            .populate('sender', 'username displayName -_id')
             .lean()
             .exec();
+
+            const messages = raw.map(({ _id, __v, ...rest }) => rest);
 
             res.json(messages);
         } catch (err) {
