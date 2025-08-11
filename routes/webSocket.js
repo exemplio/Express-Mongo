@@ -13,6 +13,7 @@ export function initChatWebSocket(server) {
     ws.on('pong', heartbeat);
     try {
       const history = await Message.find().sort({ createdAt: -1 }).limit(50).lean();
+      console.log('WebSocket connection established:', req.socket.remoteAddress);
       ws.send(
         JSON.stringify({
           type: 'history',
@@ -47,6 +48,7 @@ export function initChatWebSocket(server) {
               createdAt: message.createdAt,
             },
           };
+          console.log('WebSocket connection established:', req.socket.remoteAddress);
           wss.clients.forEach((client) => {
             if (client.readyState === 1) client.send(JSON.stringify(outgoing));
           });
