@@ -16,6 +16,7 @@ export function initChatWebSocket(server) {
 
   wss.on('connection', async (ws, req) => {
     ws.isAlive = true;
+    let deviceId = null;
     ws.on('pong', heartbeat);
     try {
       const history = await Message.find().sort({ createdAt: -1 }).limit(50).lean();
