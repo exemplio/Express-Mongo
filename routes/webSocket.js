@@ -3,7 +3,7 @@ import Message from '../models/MessageModel.js';
 
 export function initChatWebSocket(server) {
   const wss = new WebSocketServer({ server, path: '/ws' });
-
+  const clientsById = new Map();
   function heartbeat() {
     this.isAlive = true;
   }
