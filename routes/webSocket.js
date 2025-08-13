@@ -1,6 +1,7 @@
 import { WebSocketServer } from 'ws';
 import Message from '../models/MessageModel.js';
 import mongoose from 'mongoose';
+import ChatSchema from '../models/ChatModel.js';
 
 export function initChatWebSocket(server) {
   const wss = new WebSocketServer({ server, path: '/ws' });
@@ -13,57 +14,6 @@ export function initChatWebSocket(server) {
   wss.on('connection', async (ws, req) => {
     ws.isAlive = true;
     let deviceId = null;
-    // try {
-    //   const history = await Message.find().sort({ createdAt: -1 }).limit(50).lean();
-    //   console.log('WebSocket connection established:', req.socket.remoteAddress);
-    //   ws.send(
-    //     JSON.stringify({
-    //       type: 'history',
-    //       payload: history.reverse().map((m) => ({
-    //         id: m._id,
-    //         userId: m.userId || '',
-    //         username: m.username,
-    //         text: m.text,
-    //         createdAt: m.createdAt,
-    //       })),
-    //     })
-    //   );
-    // } catch (e) {
-    //   console.error('Failed to load history:', e);
-    // }
-
-    // ws.on('message', async (data) => {
-    //   try {
-    //     const msg = JSON.parse(data.toString());
-    //     if (msg?.type === 'message') {
-    //       const { chat, sender = '', username, content, receiver } = msg || {};
-    //       if (!username || !content || !receiver) return ws.send(JSON.stringify({ type: 'error', payload: 'Invalid message format' }));          
-    //       const message = new Message({ chat, sender, username, content, receiver });
-    //       await message.save();
-    //       const outgoing = {
-    //         type: 'message',
-    //         payload: {
-    //           id: message._id,
-    //           sender: message.sender || '',
-    //           username: message.username,
-    //           content: message.content,
-    //           createdAt: message.createdAt,
-    //         },
-    //       };
-    //       console.log('WebSocket connection established:', req.socket.remoteAddress);
-    //       wss.clients.forEach((client) => {
-    //         if (client.readyState === 1) client.send(JSON.stringify(outgoing));
-    //       });
-    //     } else if (msg?.type === 'typing') {
-    //       const outgoing = { type: 'typing', payload: msg.payload };
-    //       wss.clients.forEach((client) => {
-    //         if (client !== ws && client.readyState === 1) client.send(JSON.stringify(outgoing));
-    //       });
-    //     }
-    //   } catch (e) {
-    //     console.error('WS message error:', e);
-    //   }
-    // });
 
     ws.on("message", async (data) => {
       let msg;
@@ -73,25 +23,42 @@ export function initChatWebSocket(server) {
         safeSend(ws, { type: "error", error: "invalid_json" });
         return;
       }
-      if (msg.type === "broadcast") {
-        const chatId = msg.chatId;
-        if (!chatId || !mongoose.Types.ObjectId.isValid(String(chatId))) {
-            return safeSend(ws, { type: "error", error: "Invalid or missing chatId" });
-        }        
-        const raw = await Message.find({ chat: chatId })
-        .populate('sender', 'username displayName -_id')
-        .lean()
-        .exec();
-
-        const payload = raw.map(({ _id, __v, ...rest }) => rest);
-        // const payload = new Message({ chat: "1234", sender: "123", receiver: "456", content: msg.data ?? null, createdAt: new Date(), readBy:"1234" });
-        // const payload = { type: "broadcast", from: deviceId, data: msg.data ?? null };
-        for (const client of wss.clients) {
-          if (client.readyState === WebSocket.OPEN) safeSend(client, payload);
-        }
-        return;
+      switch (msg.type) {
+        case "receive":
+          try {
+            const chatId = msg.chatId;
+            if (!chatId || !mongoose.Types.ObjectId.isValid(String(chatId))) {
+                return safeSend(ws, { type: "error", error: "Invalid or missing chatId" });
+            }
+            const raw = await Message.find({ chat: chatId })
+            .populate('sender', 'username displayName -_id')
+            .lean()
+            .exec();
+            const payload = raw.map(({ _id, __v, ...rest }) => rest);
+            for (const client of wss.clients) {
+              if (client.readyState === WebSocket.OPEN) safeSend(client, payload);
+            }            
+          } catch (error) {
+            safeSend(ws, { type: "error", error: error?.message || "Failed to send message" });
+          }
+          break;
+        case "send":
+          try {
+              const { chatId, senderId, content, receiverId, lastMessage } = msg;
+              const message = new Message({
+                  chat: chatId, sender: senderId, content: content, receiver: receiverId, lastMessage: lastMessage
+              });
+              await message.save();
+              await ChatSchema.findByIdAndUpdate(chatId, { lastMessage: message._id });
+              safeSend(ws, { type: "success", message: message });
+          } catch (err) {
+            safeSend(ws, { type: "error", error: err?.message || "Failed to send message" });
+          }
+          break;      
+        default:
+          safeSend(ws, { type: "error", error: "unknown_type" });
+          break;
       }
-      safeSend(ws, { type: "error", error: "unknown_type" });
     });
 
     ws.on('error', (e) => console.error('WS error:', e));
