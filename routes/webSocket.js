@@ -1,13 +1,9 @@
 import { WebSocketServer } from 'ws';
 import Message from '../models/MessageModel.js';
+import mongoose from 'mongoose';
 
 export function initChatWebSocket(server) {
   const wss = new WebSocketServer({ server, path: '/ws' });
-  const clientsById = new Map();
-  function heartbeat() {
-    this.isAlive = true;
-  }
-
   function safeSend(ws, obj) {
     try {
       ws.send(JSON.stringify(obj));
@@ -17,7 +13,6 @@ export function initChatWebSocket(server) {
   wss.on('connection', async (ws, req) => {
     ws.isAlive = true;
     let deviceId = null;
-    ws.on('pong', heartbeat);
     // try {
     //   const history = await Message.find().sort({ createdAt: -1 }).limit(50).lean();
     //   console.log('WebSocket connection established:', req.socket.remoteAddress);
@@ -70,7 +65,7 @@ export function initChatWebSocket(server) {
     //   }
     // });
 
-    ws.on("message", (data) => {
+    ws.on("message", async (data) => {
       let msg;
       try {
         msg = typeof data === "string" ? JSON.parse(data) : JSON.parse(data.toString());
@@ -78,26 +73,21 @@ export function initChatWebSocket(server) {
         safeSend(ws, { type: "error", error: "invalid_json" });
         return;
       }
-      if (msg.type === "hello" && typeof msg.id === "string" && msg.id.length > 0) {
-        deviceId = msg.id;
-        clientsById.set(deviceId, ws);
-        safeSend(ws, { type: "hello_ack", id: deviceId });
-        return;
-      }
       if (msg.type === "broadcast") {
-        const payload = { type: "broadcast", from: deviceId, data: msg.data ?? null };
+        const chatId = msg.chatId;
+        if (!chatId || !mongoose.Types.ObjectId.isValid(String(chatId))) {
+            return safeSend(ws, { type: "error", error: "Invalid or missing chatId" });
+        }        
+        const raw = await Message.find({ chat: chatId })
+        .populate('sender', 'username displayName -_id')
+        .lean()
+        .exec();
+
+        const payload = raw.map(({ _id, __v, ...rest }) => rest);
+        // const payload = new Message({ chat: "1234", sender: "123", receiver: "456", content: msg.data ?? null, createdAt: new Date(), readBy:"1234" });
+        // const payload = { type: "broadcast", from: deviceId, data: msg.data ?? null };
         for (const client of wss.clients) {
           if (client.readyState === WebSocket.OPEN) safeSend(client, payload);
-        }
-        return;
-      }
-      if (msg.type === "send" && typeof msg.to === "string") {
-        const target = clientsById.get(msg.to);
-        if (target && target.readyState === WebSocket.OPEN) {
-          safeSend(target, { type: "message", from: deviceId, data: msg.data ?? null });
-          safeSend(ws, { type: "send_ack", to: msg.to });
-        } else {
-          safeSend(ws, { type: "error", error: "target_not_connected", to: msg.to });
         }
         return;
       }
@@ -108,7 +98,6 @@ export function initChatWebSocket(server) {
     ws.on('close', () => {});
   });
 
-  // Heartbeat to close dead connections
   const interval = setInterval(() => {
     wss.clients.forEach((ws) => {
       if (ws.isAlive === false) return ws.terminate();
