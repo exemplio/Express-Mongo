@@ -18,24 +18,24 @@ export function initChatWebSocket(server) {
     ws.isAlive = true;
     let deviceId = null;
     ws.on('pong', heartbeat);
-    try {
-      const history = await Message.find().sort({ createdAt: -1 }).limit(50).lean();
-      console.log('WebSocket connection established:', req.socket.remoteAddress);
-      ws.send(
-        JSON.stringify({
-          type: 'history',
-          payload: history.reverse().map((m) => ({
-            id: m._id,
-            userId: m.userId || '',
-            username: m.username,
-            text: m.text,
-            createdAt: m.createdAt,
-          })),
-        })
-      );
-    } catch (e) {
-      console.error('Failed to load history:', e);
-    }
+    // try {
+    //   const history = await Message.find().sort({ createdAt: -1 }).limit(50).lean();
+    //   console.log('WebSocket connection established:', req.socket.remoteAddress);
+    //   ws.send(
+    //     JSON.stringify({
+    //       type: 'history',
+    //       payload: history.reverse().map((m) => ({
+    //         id: m._id,
+    //         userId: m.userId || '',
+    //         username: m.username,
+    //         text: m.text,
+    //         createdAt: m.createdAt,
+    //       })),
+    //     })
+    //   );
+    // } catch (e) {
+    //   console.error('Failed to load history:', e);
+    // }
 
     // ws.on('message', async (data) => {
     //   try {
