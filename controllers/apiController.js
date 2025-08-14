@@ -273,13 +273,13 @@ class DataController {
 
     async sendMessage(req, res) {
         try {
-            const { chatId, senderId, content, receiverId, lastMessage } = req.body;
-            console.log(`Sending message to chat ${chatId} from user ${senderId}: ${content}`);
+            const { chat, sender, content, receiver, lastMessage } = req.body;
+            console.log(`Sending message to chat ${chat} from user ${sender}: ${content}`);
             const message = new MessageSchema({ 
-                chat: chatId, sender: senderId, content: content, receiver: receiverId, lastMessage: lastMessage
+                chat: chat, sender: sender, content: content, receiver: receiver, lastMessage: lastMessage
             });
             await message.save();
-            await ChatSchema.findByIdAndUpdate(chatId, { lastMessage: message._id });
+            await ChatSchema.findByIdAndUpdate(chat, { lastMessage: message._id });
             res.status(201).json(message);
         } catch (err) {
             res.status(400).json({ error: err.message });
@@ -288,13 +288,13 @@ class DataController {
 
     async getMessages(req, res) {
         try {
-            const { chatId } = req.query;
+            const { chat } = req.query;
 
-            if (!chatId || !mongoose.Types.ObjectId.isValid(String(chatId))) {
-                return res.status(400).json({ error: 'Invalid or missing chatId' });
+            if (!chat || !mongoose.Types.ObjectId.isValid(String(chat))) {
+                return res.status(400).json({ error: 'Invalid or missing chat' });
             }
 
-            const raw = await MessageSchema.find({ chat: chatId })
+            const raw = await MessageSchema.find({ chat: chat })
             .populate('sender', 'username displayName -_id')
             .lean()
             .exec();

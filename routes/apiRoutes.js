@@ -173,7 +173,7 @@ router.route("/get-messages")
  *     description: Obtiene los mensajes de un chat específico.
  *     parameters:
  *       - in: body
- *         name: chatId
+ *         name: chat
  *         description: ID del chat para obtener sus mensajes.
  *         required: true
  *         schema:

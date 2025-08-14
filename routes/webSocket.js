@@ -26,11 +26,11 @@ export function initChatWebSocket(server) {
       switch (msg.type) {
         case "receive":
           try {
-            const chatId = msg.chatId;
-            if (!chatId || !mongoose.Types.ObjectId.isValid(String(chatId))) {
-                return safeSend(ws, { type: "error", error: "Invalid or missing chatId" });
+            const chat = msg.chat;
+            if (!chat || !mongoose.Types.ObjectId.isValid(String(chat))) {
+                return safeSend(ws, { type: "error", error: "Invalid or missing chat" });
             }
-            const raw = await Message.find({ chat: chatId })
+            const raw = await Message.find({ chat: chat })
             .populate('sender', 'username displayName -_id')
             .lean()
             .exec();
@@ -44,12 +44,12 @@ export function initChatWebSocket(server) {
           break;
         case "send":
           try {
-              const { chatId, senderId, content, receiverId, lastMessage } = msg;
+              const { chat, sender, content, receiver, lastMessage } = msg;
               const message = new Message({
-                  chat: chatId, sender: senderId, content: content, receiver: receiverId, lastMessage: lastMessage
+                  chat: chat, sender: sender, content: content, receiver: receiver, lastMessage: lastMessage
               });
               await message.save();
-              await ChatSchema.findByIdAndUpdate(chatId, { lastMessage: message._id });
+              await ChatSchema.findByIdAndUpdate(chat, { lastMessage: message._id });
               safeSend(ws, { type: "success", message: message });
           } catch (err) {
             safeSend(ws, { type: "error", error: err?.message || "Failed to send message" });
