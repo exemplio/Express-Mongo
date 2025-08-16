@@ -9,4 +9,12 @@ const messageSchema = new mongoose.Schema({
   readBy: [{ type: String, ref: 'Clients' }] 
 });
 
+messageSchema.set('toJSON', {
+  transform: (doc, ret) => {
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  }
+});
+
 module.exports = mongoose.model('Message', messageSchema);

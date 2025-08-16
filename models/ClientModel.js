@@ -9,4 +9,12 @@ const clientSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+clientSchema.set('toJSON', {
+  transform: (doc, ret) => {
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  }
+});
+
 module.exports = mongoose.model('Clients', clientSchema);

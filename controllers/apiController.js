@@ -31,16 +31,20 @@ class DataController {
                 if (!user) {
                     user = new UserSchema({ userId : uuidv4(), email, roleType, userName });
                     user = await user.save();
+                    if (roleType === 'user') {
+                        let client = await ClientSchema.findOne({ email });
+                        if (!client && roleType === 'regular') {
+                            client = new ClientSchema({ userId: user.userId, email, userName });
+                            client = await client.save();
+                            return res.status(200).json(client);
+                        }else{
+                            return { status: 200, message: "Client already exists" };
+                        }
+                    }else{
+                        return res.status(200).json(user);
+                    }
                 }else{
                     return { status: 200, message: "User already exists" };
-                }
-                let client = await ClientSchema.findOne({ email });
-                if (!client && roleType === 'regular') {
-                    client = new ClientSchema({ userId: user.userId, email, userName });
-                    client = await client.save();
-                    return res.status(200).json(client);
-                }else{
-                    return { status: 200, message: "Client already exists" };
                 }
             }
         } catch (err) {

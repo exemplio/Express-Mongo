@@ -7,4 +7,12 @@ const userSchema = new mongoose.Schema({
   userName: { type: String, required: true }
 });
 
+userSchema.set('toJSON', {
+  transform: (doc, ret) => {
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  }
+});
+
 export default mongoose.model('Users', userSchema);
