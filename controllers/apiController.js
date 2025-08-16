@@ -147,8 +147,7 @@ class DataController {
             ClientSchema.find(query)
             .sort(sortOptions)
             .skip((pageNum - 1) * limitNum)
-            .limit(limitNum)
-            .lean(),
+            .limit(limitNum),
             ClientSchema.countDocuments(query),
         ]);
 
@@ -283,13 +282,11 @@ class DataController {
             }
 
             const raw = await MessageSchema.find({ chat: chat })
-            .populate('sender', 'userName displayName -_id')
+            .populate('sender', 'userName displayName')
             .lean()
             .exec();
 
-            const messages = raw.map(({ _id, __v, ...rest }) => rest);
-
-            res.json(messages);
+            res.json(raw);
         } catch (err) {
             res.status(500).json({ error: err.message });
         }

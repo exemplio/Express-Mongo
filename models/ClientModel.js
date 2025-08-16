@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const clientSchema = new mongoose.Schema({
+const ClientSchema = new mongoose.Schema({
   userName: { type: String, required: true, unique: true },
   userId: { type: String, required: true, unique: true },
   displayName: { type: String },
@@ -9,7 +9,7 @@ const clientSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-clientSchema.set('toJSON', {
+ClientSchema.set('toJSON', {
   transform: (doc, ret) => {
     delete ret._id;
     delete ret.__v;
@@ -17,4 +17,4 @@ clientSchema.set('toJSON', {
   }
 });
 
-module.exports = mongoose.model('Clients', clientSchema);
+module.exports = mongoose.model('Clients', ClientSchema);
