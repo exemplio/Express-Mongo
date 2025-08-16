@@ -67,19 +67,18 @@ class DataController {
             }
             if (response.status == 200) {
                 let query = { email: data?.email };
-                await ClientSchema.find(query).then(async (existingClient) => {
-                    if (existingClient.length > 0) {
-                        existingClient = existingClient[0];
-                        const client = ClientSchema({
-                            userName: existingClient.userName,
-                            userId: existingClient.userId,
-                            displayName: existingClient.displayName,
-                            email: existingClient.email,
-                            avatar: existingClient.avatar
+                await UserSchema.find(query).then(async (existingUser) => {
+                    if (existingUser.length > 0) {
+                        existingUser = existingUser[0];
+                        const user = UserSchema({
+                            userId: existingUser.userId,
+                            email: existingUser.email,
+                            roleType: existingUser.roleType,
+                            userName: existingUser.userName
                         });
-                        return res.status(200).json(client);
+                        return res.status(200).json(user);
                     } else {
-                        return res.status(202).json({ message: "Client not found" });
+                        return res.status(202).json({ message: "User not found" });
                     }
                 });
             }
