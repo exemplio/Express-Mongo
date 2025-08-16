@@ -35,43 +35,40 @@ export function initChatWebSocket(server) {
       switch (msg.type) {
         case "receive":
           try {
-            const chat = msg.chat;
-            if (!chat || !isUuid.isValid(String(chat))) {
-                return safeSend(ws, { type: "error", error: "Invalid or missing chat" });
+            const chatId = msg.chatId;
+            if (!chatId || !isUuid.isValid(String(chatId))) {
+                return safeSend(ws, { type: "error", error: "Invalid or missing chatId" });
             }
-            const raw = await Message.find({ chat: chat })
-            .populate('sender', 'username displayName -_id')
-            .lean()
+            const raw = await Message.find({ chatId: chatId })
+            .populate('senderId', 'username displayName')
             .exec();
-            const payload = raw.map(({ _id, __v, ...rest }) => rest);
             for (const client of wss.clients) {
-              if (client.readyState === WebSocket.OPEN) safeSend(client, payload);
-            }            
+              if (client.readyState === WebSocket.OPEN) safeSend(client, raw);
+            }
           } catch (error) {
             safeSend(ws, { type: "error", error: error?.message || "Failed to send message" });
           }
           break;
         case "send":
           try {
-              const { chat, sender, content, receiver, lastMessage } = msg;
+              const { chatId, senderId, content, receiverId, lastMessage } = msg;
+                console.log("Connected users:", Object.keys(userSockets));
               const message = new Message({
-                  chat: chat, sender: sender, content: content, receiver: receiver, lastMessage: lastMessage
+                  chatId: chatId, senderId: senderId, content: content, receiverId: receiverId, lastMessage: lastMessage
               });
               await message.save();
-              await ChatSchema.findByIdAndUpdate(chat, { lastMessage: message._id });
+              console.log("New message created:", message);
+              await ChatSchema.findByIdAndUpdate(chatId, { lastMessage: message.content });
               safeSend(ws, { type: "success", message: message });
-              console.log("New message sent:", ws);
-              console.log("Connected users:", Object.keys(userSockets));
-              const recipientUserId = "123";
-              if (userSockets[recipientUserId]) {
-                  userSockets[recipientUserId].forEach(clientWs => {
+              if (userSockets[receiverId]) {
+                  userSockets[receiverId].forEach(clientWs => {
                       if (clientWs.readyState === clientWs.OPEN) {                          
                           const { _id, __v, ...messageWithoutId } = message?._doc || {};
                           console.log("Sending message to recipient:", messageWithoutId);
                           safeSend(clientWs, { message: messageWithoutId });
                       }
                   });
-              }
+              } 
           } catch (err) {
             safeSend(ws, { type: "error", error: err?.message || "Failed to send message" });
           }

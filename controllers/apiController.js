@@ -2,7 +2,7 @@ import UserSchema from '../models/UserModel.js';
 import ChatSchema from '../models/ChatModel.js';
 import MessageSchema from '../models/MessageModel.js';
 import ClientSchema from '../models/ClientModel.js';
-import { validate as isUuid } from 'uuid';
+import validator from 'validator';
 import { v4 as uuidv4  } from 'uuid';
 
 class DataController {
@@ -218,7 +218,7 @@ class DataController {
     async deleteClient(req, res) {
         try {            
             const { id } = req.params;            
-            if (!isUuid.isValid(id)) {
+            if (!validator.isUUID(id)) {
                 return res.status(400).json({ error: 'Invalid ID format' });
             }
             const deletedClient = await ClientSchema.findByIdAndDelete(id);
@@ -258,32 +258,16 @@ class DataController {
         }
     }
 
-    async sendMessage(req, res) {
-        try {
-            const { chat, sender, content, receiver, lastMessage } = req.body;
-            console.log(`Sending message to chat ${chat} from user ${sender}: ${content}`);
-            const message = new MessageSchema({ 
-                chat: chat, sender: sender, content: content, receiver: receiver, lastMessage: lastMessage
-            });
-            await message.save();
-            await ChatSchema.findByIdAndUpdate(chat, { lastMessage: message._id });
-            res.status(201).json(message);
-        } catch (err) {
-            res.status(400).json({ error: err.message });
-        }
-    }
-
     async getMessages(req, res) {
         try {
-            const { chat } = req.query;
+            const { chatId } = req.query;
 
-            if (!chat || !isUuid.isValid(String(chat))) {
-                return res.status(400).json({ error: 'Invalid or missing chat' });
+            if (!chatId || !validator.isUUID(String(chatId))) {
+                return res.status(400).json({ error: 'Invalid or missing chatId' });
             }
 
-            const raw = await MessageSchema.find({ chat: chat })
-            .populate('sender', 'userName displayName')
-            .lean()
+            const raw = await MessageSchema.find({ chatId: chatId })
+            .populate('senderId', 'userName displayName')
             .exec();
 
             res.json(raw);

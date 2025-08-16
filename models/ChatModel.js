@@ -14,7 +14,7 @@ const chatSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   lastMessage: { type: String, ref: 'Message' },
   chatId: { type: String, required: true }
-});
+}, { _id: false });
 
 chatSchema.set('toJSON', {
   transform: (doc, ret) => {
