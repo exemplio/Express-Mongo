@@ -16,13 +16,11 @@ app.use('/api', dataRouter);
 app.get('/ping', (_req, res) => res.send('pong'));
 app.use('/swagger', swaggerUi.serve, swaggerUi.setup(specs));
 
-// Error handler
 app.use((err, req, res, next) => {
   console.error(err?.stack || err);
   res.status(500).json({ error: 'Internal Server Error' });
 });
 
-// Server + WebSocket
 const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
 

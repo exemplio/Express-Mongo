@@ -17,31 +17,9 @@ router.get('/get-clients', dataController.getClients);
  *         description: No se encontró la data.
  */
 
-router.post('/create-client', dataController.createClient);
-
-/**
- * @swagger
- * /api/create-client:
- *   post:
- *     summary: Create a new client
- *     description: Creates a new client with the provided data.
- *     parameters:
- *       - in: path
- *         name: id
- *         description: ID de la data
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Petición exitosa. Data agregada.
- *       404:
- *         description: No se pudo ingresar la dara.
- */
-
 router.route("/:id")
-    .put(dataController.update)
-    .delete(dataController.delete);
+    .put(dataController.updateClient)
+    .delete(dataController.deleteClient);
 
 /**
  * @swagger
@@ -76,6 +54,29 @@ router.route("/:id")
  *         description: Petición exitosa. Data eliminada correctamente.
  *       404:
  *         description: No se encontró la data con el ID especificado para eliminar.
+ */
+
+router.route("/login/register")
+    .post(dataController.register)
+
+/**
+ * @swagger
+ * /api/register:
+ *   put:
+ *     summary: Registro
+ *     description: Registra un nuevo usuario con el email y password proporcionados.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         description: ID de la data
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Petición exitosa. Data actualizada correctamente.
+ *       404:
+ *         description: No se encontró la data con el ID especificado para actualizar.
  */
 
 router.route("/login/passwordGrant")

@@ -2,9 +2,11 @@ import { WebSocketServer } from 'ws';
 import Message from '../models/MessageModel.js';
 import mongoose from 'mongoose';
 import ChatSchema from '../models/ChatModel.js';
+import { validate as isUuid } from 'uuid';
 
 export function initChatWebSocket(server) {
   const wss = new WebSocketServer({ server, path: '/ws' });
+  const userSockets = {};
   function safeSend(ws, obj) {
     try {
       ws.send(JSON.stringify(obj));
@@ -13,7 +15,14 @@ export function initChatWebSocket(server) {
 
   wss.on('connection', async (ws, req) => {
     ws.isAlive = true;
-    let deviceId = null;
+    const params = new URLSearchParams(req.url.split('?')[1]);
+    const userId = params.get('userId');
+    if (!userId) {
+      ws.close(1008, "No userId");
+      return;
+    }
+    if (!userSockets[userId]) userSockets[userId] = [];
+    userSockets[userId].push(ws);
 
     ws.on("message", async (data) => {
       let msg;
@@ -27,7 +36,7 @@ export function initChatWebSocket(server) {
         case "receive":
           try {
             const chat = msg.chat;
-            if (!chat || !mongoose.Types.ObjectId.isValid(String(chat))) {
+            if (!chat || !isUuid.isValid(String(chat))) {
                 return safeSend(ws, { type: "error", error: "Invalid or missing chat" });
             }
             const raw = await Message.find({ chat: chat })
@@ -51,6 +60,18 @@ export function initChatWebSocket(server) {
               await message.save();
               await ChatSchema.findByIdAndUpdate(chat, { lastMessage: message._id });
               safeSend(ws, { type: "success", message: message });
+              console.log("New message sent:", ws);
+              console.log("Connected users:", Object.keys(userSockets));
+              const recipientUserId = "123";
+              if (userSockets[recipientUserId]) {
+                  userSockets[recipientUserId].forEach(clientWs => {
+                      if (clientWs.readyState === clientWs.OPEN) {                          
+                          const { _id, __v, ...messageWithoutId } = message?._doc || {};
+                          console.log("Sending message to recipient:", messageWithoutId);
+                          safeSend(clientWs, { message: messageWithoutId });
+                      }
+                  });
+              }
           } catch (err) {
             safeSend(ws, { type: "error", error: err?.message || "Failed to send message" });
           }

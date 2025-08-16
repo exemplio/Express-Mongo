@@ -1,18 +1,55 @@
-import mongoose from 'mongoose';
-import movieSchema from '../models/MovieModel.js';
 import UserSchema from '../models/UserModel.js';
 import ChatSchema from '../models/ChatModel.js';
 import MessageSchema from '../models/MessageModel.js';
 import ClientSchema from '../models/ClientModel.js';
+import { validate as isUuid } from 'uuid';
+import { v4 as uuidv4  } from 'uuid';
 
 class DataController {
     constructor() {
-        this.login = this.login.bind(this);
-        this.insertUserIfNotExists = this.insertUserIfNotExists.bind(this);
+        // this.login = this.login.bind(this);
     }
+    async register(req, res) {
+        const { email, password, roleType, userName } = req.body;
+        const url = process.env.FIREBASE_REGISTER_URL;
+        const payload = {
+            email,
+            password
+        };
+        try {
+            const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                return res.status(400).json(data);
+            }
+            if (response.status == 200) {
+                let user = await UserSchema.findOne({ email });            
+                if (!user) {
+                    user = new UserSchema({ userId : uuidv4(), email, roleType, userName });
+                    user = await user.save();
+                }else{
+                    return { status: 200, message: "User already exists" };
+                }
+                let client = await ClientSchema.findOne({ email });
+                if (!client && roleType === 'regular') {
+                    client = new ClientSchema({ userId: user.userId, email, userName });
+                    client = await client.save();
+                    return res.status(200).json(client);
+                }else{
+                    return { status: 200, message: "Client already exists" };
+                }
+            }
+        } catch (err) {
+            return res.status(500).json({ error: "Internal Server Error", details: err.toString() });
+        }
+    };
     async login(req, res) {
         const { email, password } = req.body;
-        const url = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyCNGkGWhHJU8vSBEY37RYnDxTTQAC4sk-k";
+        const url = process.env.FIREBASE_AUTH_URL;
         const payload = {
             email,
             password,
@@ -34,7 +71,7 @@ class DataController {
                     if (existingClient.length > 0) {
                         existingClient = existingClient[0];
                         const client = ClientSchema({
-                            username: existingClient.username,
+                            userName: existingClient.userName,
                             userId: existingClient.userId,
                             displayName: existingClient.displayName,
                             email: existingClient.email,
@@ -51,29 +88,13 @@ class DataController {
         }
     };
 
-    async insertUserIfNotExists(userId, email) {
-        try {
-            let user = await UserSchema.findOne({ email });            
-            if (!user) {
-                user = new UserSchema({ userId, email });
-                user = await user.save();
-            }else{
-                return { status: 200, message: "User already exists" };
-            }
-            return user;
-        } catch (error) {
-            console.error('Error inserting user:', error);
-            throw error;
-        }
-    }
-
     async getClients(req, res) {
         try {
         const {
             page = '1',
             limit = '10',
             q,
-            username,
+            userName,
             displayName,
             email,
             createdAfter,
@@ -87,12 +108,10 @@ class DataController {
 
         const query = {};
 
-        // Field-specific filters (case-insensitive)
-        if (username) query.username = new RegExp(username, 'i');
+        if (userName) query.userName = new RegExp(userName, 'i');
         if (displayName) query.displayName = new RegExp(displayName, 'i');
         if (email) query.email = new RegExp(email, 'i');
 
-        // CreatedAt range filters
         if (createdAfter || createdBefore) {
             const range = {};
             if (createdAfter) {
@@ -106,18 +125,17 @@ class DataController {
             if (Object.keys(range).length) query.createdAt = range;
         }
 
-        // Generic search across multiple fields
         if (q) {
             const regex = new RegExp(q, 'i');
             query.$or = [
-            { username: regex },
+            { userName: regex },
             { displayName: regex },
             { email: regex },
             ];
         }
 
         // Sorting
-        const allowedSort = new Set(['createdAt', 'username', 'email', 'displayName']);
+        const allowedSort = new Set(['createdAt', 'userName', 'email', 'displayName']);
         const sortKey = allowedSort.has(sortBy) ? sortBy : 'createdAt';
         const sortDir = sortOrder === 'asc' ? 1 : -1;
         const sortOptions = { [sortKey]: sortDir };
@@ -147,45 +165,12 @@ class DataController {
         }
     }
 
-    async createClient(req, res) {
-        try {
-            const { username, email, displayName, avatar, userId } = req.body || {};
-            if (!username || !email) {
-                return res.status(400).json({ success: false, message: 'username and email are required' });
-            }
-            const client = new ClientSchema({
-                username: String(username).trim(),
-                userId: String(userId).trim().toLowerCase(),
-                email: String(email).trim().toLowerCase(),
-                displayName: displayName ? String(displayName).trim() : undefined,
-                avatar: avatar ? String(avatar).trim() : undefined,
-            });
-
-            const saved = await client.save();
-            return res.status(201).json({ success: true, data: saved });
-        } catch (err) {
-            if (err && err.code === 11000) {
-                const field = Object.keys(err.keyValue || {})[0] || 'field';
-                return res.status(409).json({ success: false, message: `Duplicate ${field}: already exists` });
-            }
-            if (err && err.name === 'ValidationError') {
-            const errors = Object.fromEntries(
-                Object.entries(err.errors).map(([k, v]) => [k, v.message])
-            );
-            return res.status(400).json({ success: false, message: 'Validation failed', errors });
-            }
-
-            console.error('Error creating client:', err);
-            return res.status(500).json({ success: false, message: 'Server Error' });
-        }
-    }
-
-    async update(req, res) {
+    async updateClient(req, res) {
         try {
             const { id } = req.params;
             const updateData = req.body;
-            const options = { new: true, runValidators: true };            
-            const updatedDoc = await movieSchema.findByIdAndUpdate(
+            const options = { new: true, runValidators: true };
+            const updatedDoc = await ClientSchema.findByIdAndUpdate(
             id,
             updateData,
             options
@@ -228,22 +213,22 @@ class DataController {
         }
     }
 
-    async delete(req, res) {
+    async deleteClient(req, res) {
         try {            
             const { id } = req.params;            
-            if (!mongoose.Types.ObjectId.isValid(id)) {
+            if (!isUuid.isValid(id)) {
                 return res.status(400).json({ error: 'Invalid ID format' });
             }
-            const deletedMovie = await movieSchema.findByIdAndDelete(id);
-            
-            if (!deletedMovie) {
-                return res.status(404).json({ error: 'Movie not found' });
+            const deletedClient = await ClientSchema.findByIdAndDelete(id);
+
+            if (!deletedClient) {
+                return res.status(404).json({ error: 'Client not found' });
             }
 
             res.json({ 
                 success: true,
-                message: 'Movie deleted successfully',
-                data: deletedMovie
+                message: 'Client deleted successfully',
+                data: deletedClient
             });
             
         } catch (err) {
@@ -254,7 +239,7 @@ class DataController {
     async createChat (req, res) {
         try {
             const { members, name, isGroup, lastMessage } = req.body;
-            const chat = new ChatSchema({ members, name, isGroup, lastMessage });
+            const chat = new ChatSchema({ members, name, isGroup, lastMessage, chatId: uuidv4() });
             await chat.save();
             res.status(200).json(chat);
         } catch (err) {
@@ -264,7 +249,7 @@ class DataController {
 
     async listChats(req, res) {
         try {
-            const chats = await ChatSchema.find({ members: req.params.userId }).populate('members', 'username displayName');
+            const chats = await ChatSchema.find({ members: req.params.userId }).populate('members', 'userName displayName');
             res.json(chats);
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -290,12 +275,12 @@ class DataController {
         try {
             const { chat } = req.query;
 
-            if (!chat || !mongoose.Types.ObjectId.isValid(String(chat))) {
+            if (!chat || !isUuid.isValid(String(chat))) {
                 return res.status(400).json({ error: 'Invalid or missing chat' });
             }
 
             const raw = await MessageSchema.find({ chat: chat })
-            .populate('sender', 'username displayName -_id')
+            .populate('sender', 'userName displayName -_id')
             .lean()
             .exec();
 
