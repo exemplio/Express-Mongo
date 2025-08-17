@@ -147,7 +147,14 @@ class DataController {
             ClientSchema.find(query)
             .sort(sortOptions)
             .skip((pageNum - 1) * limitNum)
-            .limit(limitNum),
+            .limit(limitNum)
+            .populate({
+                path: 'userId',
+                model: 'Users',
+                localField: 'userId',
+                foreignField: 'userId',
+                justOne: false
+            }),
             ClientSchema.countDocuments(query),
         ]);
 
@@ -267,7 +274,6 @@ class DataController {
     async getMessages(req, res) {
         try {
             const { chatId } = req.query;
-
             if (!chatId || !validator.isUUID(String(chatId))) {
                 return res.status(400).json({ error: 'Invalid or missing chatId' });
             }
