@@ -2,7 +2,8 @@ import { WebSocketServer } from 'ws';
 import Message from '../models/MessageModel.js';
 import mongoose from 'mongoose';
 import ChatSchema from '../models/ChatModel.js';
-import { validate as isUuid } from 'uuid';
+import validator from 'validator';
+import { v4 as uuidv4  } from 'uuid';
 
 export function initChatWebSocket(server) {
   const wss = new WebSocketServer({ server, path: '/ws' });
@@ -15,6 +16,14 @@ export function initChatWebSocket(server) {
 
   wss.on('connection', async (ws, req) => {
     ws.isAlive = true;
+    ws.on('pong', () => { ws.isAlive = true; });
+    setInterval(() => {
+      wss.clients.forEach(function each(ws) {
+        if (ws.isAlive === false) return ws.terminate();
+        ws.isAlive = false;
+        ws.ping();
+      });
+    }, 30000);
     const params = new URLSearchParams(req.url.split('?')[1]);
     const userId = params.get('userId');
     if (!userId) {
@@ -36,7 +45,7 @@ export function initChatWebSocket(server) {
         case "receive":
           try {
             const chatId = msg.chatId;
-            if (!chatId || !isUuid.isValid(String(chatId))) {
+            if (!chatId || !validator.isUUID(String(chatId))) {
                 return safeSend(ws, { type: "error", error: "Invalid or missing chatId" });
             }
             const raw = await Message.find({ chatId: chatId })
@@ -51,20 +60,29 @@ export function initChatWebSocket(server) {
           break;
         case "send":
           try {
-              const { chatId, senderId, content, receiverId, lastMessage } = msg;
-                console.log("Connected users:", Object.keys(userSockets));
+              const { senderId, content, receiverId, lastMessage } = msg;
+              console.log("Connected users:", Object.keys(userSockets));
+              console.log("Connected:", msg?.chatId);
+              console.log("Connected:", typeof msg?.chatId);
+              console.log("Connected:", msg);
+              if (msg?.chatId == "null") {
+                const chat = new ChatSchema({ members: [userId,receiverId], name:"", isGroup:false, lastMessage:"", chatId: uuidv4() });
+                console.log("New chat created:", chat);
+                await chat.save();
+              }
               const message = new Message({
-                  chatId: chatId, senderId: senderId, content: content, receiverId: receiverId, lastMessage: lastMessage
+                  chatId: msg?.chatId, senderId: senderId, content: content, receiverId: receiverId, lastMessage: lastMessage
               });
               await message.save();
-              console.log("New message created:", message);
-              await ChatSchema.findByIdAndUpdate(chatId, { lastMessage: message.content });
+              await ChatSchema.findOneAndUpdate(
+                { chatId: msg?.chatId },
+                { lastMessage: message.content }
+              );
               safeSend(ws, { type: "success", message: message });
               if (userSockets[receiverId]) {
                   userSockets[receiverId].forEach(clientWs => {
                       if (clientWs.readyState === clientWs.OPEN) {                          
                           const { _id, __v, ...messageWithoutId } = message?._doc || {};
-                          console.log("Sending message to recipient:", messageWithoutId);
                           safeSend(clientWs, { message: messageWithoutId });
                       }
                   });
@@ -82,14 +100,6 @@ export function initChatWebSocket(server) {
     ws.on('error', (e) => console.error('WS error:', e));
     ws.on('close', () => {});
   });
-
-  const interval = setInterval(() => {
-    wss.clients.forEach((ws) => {
-      if (ws.isAlive === false) return ws.terminate();
-      ws.isAlive = false;
-      ws.ping();
-    });
-  }, 30000);
 
   wss.on('close', () => clearInterval(interval));
 
