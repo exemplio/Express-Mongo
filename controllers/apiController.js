@@ -273,26 +273,38 @@ class DataController {
 
     async getMessages(req, res) {
         try {
-            const { chatId } = req.query;
-            if (!chatId || !validator.isUUID(String(chatId))) {
-                return res.status(400).json({ error: 'Invalid or missing chatId' });
+            const { chatId, senderId } = req.query;
+            if (chatId){
+                if(!validator.isUUID(String(chatId))) {
+                    return res.status(400).json({ error: 'Invalid or missing chatId' });
+                }
             }
-            const raw = await MessageSchema.find({ chatId: chatId })
-              .populate({
-                path: 'chatId', 
+            if (senderId) {
+                if (!validator.isUUID(String(senderId))) {
+                    return res.status(400).json({ error: 'Invalid or missing senderId' });
+                }
+            }
+            if (!chatId && !senderId) {
+                return res.status(400).json({ error: 'At least one of chatId or senderId must be provided' });
+            }
+            const filter = {};
+            if (chatId) filter.chatId = chatId;
+            if (senderId) filter.$or = [{ senderId: senderId }, { chatId: chatId }];
+            const raw = await MessageSchema.find(filter)
+            .populate({
+                path: 'chatId',
                 model: 'Chats',
                 localField: 'chatId',
                 foreignField: 'chatId',
                 justOne: true,
                 populate: {
-                    path: 'members',
-                    model: 'Users',
-                    localField: 'members',
-                    foreignField: 'userId',
-                    justOne: false
+                path: 'members',
+                model: 'Users',
+                localField: 'members',
+                foreignField: 'userId',
+                justOne: false
                 }
             });
-
             res.json(raw);
         } catch (err) {
             res.status(500).json({ error: err.message });
