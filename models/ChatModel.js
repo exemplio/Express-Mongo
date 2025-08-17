@@ -4,7 +4,7 @@ const chatSchema = new mongoose.Schema({
   name: { type: String },
   isGroup: { type: Boolean, default: false },
   members: {
-    type: [{ type: String, ref: 'User' }],
+    type: [{ type: String, ref: 'Users' }],
     required: [true, 'members is required'],
     validate: {
       validator: (v) => Array.isArray(v) && v.length > 1,
@@ -12,8 +12,8 @@ const chatSchema = new mongoose.Schema({
     }
   },
   createdAt: { type: Date, default: Date.now },
-  lastMessage: { type: String, ref: 'Message' },
-  chatId: { type: String, required: true }
+  lastMessage: { type: String, ref: 'Messages' },
+  chatId: { type: String, required: true, unique: true }
 }, { _id: false });
 
 chatSchema.set('toJSON', {
@@ -24,4 +24,4 @@ chatSchema.set('toJSON', {
   }
 });
 
-module.exports = mongoose.model('Chat', chatSchema);
+module.exports = mongoose.model('Chats', chatSchema);

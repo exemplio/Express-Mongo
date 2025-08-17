@@ -134,12 +134,12 @@ router.route("/create-chat")
  *         description: No se encontró la data con el ID especificado para actualizar.
  */
 
-router.route("/list-chats")
+router.route("/get-chats")
     .post(dataController.listChats);
 
 /**
  * @swagger
- * /api/list-chats:
+ * /api/get-chats:
  *   post:
  *     summary: Listar chats
  *     description: Obtiene la lista de chats del usuario especificado.

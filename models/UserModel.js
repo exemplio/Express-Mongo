@@ -2,17 +2,9 @@ import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema({
   userId: { type: String, required: true, unique: true },
-  email: { type: String, required: true },
+  email: { type: String, required: true, unique: true, },
   roleType: { type: String, required: true, enum: ['regular', 'admin'] },
-  userName: { type: String, required: true }
-});
-
-userSchema.set('toJSON', {
-  transform: (doc, ret) => {
-    delete ret._id;
-    delete ret.__v;
-    return ret;
-  }
-});
+  userName: { type: String, required: true, unique: true, }
+}, { _id: false });
 
 export default mongoose.model('Users', userSchema);

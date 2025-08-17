@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const messageSchema = new mongoose.Schema({
-  chatId:   { type: String, ref: 'Chat', required: true },      
+  chatId:   { type: String, ref: 'Chats', required: true, unique: true },
   senderId: { type: String, ref: 'Clients', required: true },   
   receiverId: { type: String, ref: 'Clients', required: true }, 
   content: { type: String, required: true },
@@ -17,4 +17,4 @@ messageSchema.set('toJSON', {
   }
 });
 
-module.exports = mongoose.model('Message', messageSchema);
+module.exports = mongoose.model('Messages', messageSchema);

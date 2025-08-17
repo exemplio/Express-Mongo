@@ -251,8 +251,14 @@ class DataController {
 
     async listChats(req, res) {
         try {
-            const chats = await ChatSchema.find({ members: req.params.userId }).populate('members', 'userName displayName');
-            res.json(chats);
+            const chats = await ChatSchema.find({ members: req.body.members }).populate({
+                path: 'members',
+                model: 'Users',
+                localField: 'members',
+                foreignField: 'userId',
+                justOne: false
+            });
+            res.status(200).json(chats);
         } catch (err) {
             res.status(500).json({ error: err.message });
         }
@@ -265,10 +271,14 @@ class DataController {
             if (!chatId || !validator.isUUID(String(chatId))) {
                 return res.status(400).json({ error: 'Invalid or missing chatId' });
             }
-
             const raw = await MessageSchema.find({ chatId: chatId })
-            .populate('senderId', 'userName displayName')
-            .exec();
+              .populate({
+                path: 'chatId', 
+                model: 'Chats',
+                localField: 'chatId',
+                foreignField: 'chatId',
+                justOne: true
+            });
 
             res.json(raw);
         } catch (err) {
