@@ -60,7 +60,7 @@ export function initChatWebSocket(server) {
         case "send":
           try {
               const { senderId, content, receiverId, lastMessage } = msg;
-              if (msg?.chatId == "null") {
+              if (msg?.chatId == "empty") {                
                 const chat = new ChatSchema({ members: [userId,receiverId], name:"", isGroup:false, lastMessage:"", chatId: uuidv4() });
                 await chat.save();
                 const message = new Messages({
@@ -82,11 +82,11 @@ export function initChatWebSocket(server) {
                 } 
               }else{
                   const message = new Messages({
-                    chatId: chat?.chatId, senderId: senderId, content: content, receiverId: receiverId, lastMessage: lastMessage
+                    chatId: msg?.chatId, senderId: senderId, content: content, receiverId: receiverId, lastMessage: lastMessage
                   });
                   await message.save();
                   await ChatSchema.findOneAndUpdate(
-                    { chatId: chat?.chatId },
+                    { chatId: msg?.chatId },
                     { lastMessage: message.content }
                   );
                   safeSend(ws, { type: "success", message: message });

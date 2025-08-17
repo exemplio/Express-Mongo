@@ -277,7 +277,14 @@ class DataController {
                 model: 'Chats',
                 localField: 'chatId',
                 foreignField: 'chatId',
-                justOne: true
+                justOne: true,
+                populate: {
+                    path: 'members',
+                    model: 'Users',
+                    localField: 'members',
+                    foreignField: 'userId',
+                    justOne: false
+                }
             });
 
             res.json(raw);
