@@ -14,14 +14,6 @@ const chatSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   lastMessage: { type: String, ref: 'Messages' },
   chatId: { type: String, required: true, unique: true }
-}, { _id: false });
-
-chatSchema.set('toJSON', {
-  transform: (doc, ret) => {
-    delete ret._id;
-    delete ret.__v;
-    return ret;
-  }
 });
 
 module.exports = mongoose.model('Chats', chatSchema);

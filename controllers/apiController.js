@@ -31,9 +31,9 @@ class DataController {
                 if (!user) {
                     user = new UserSchema({ userId : uuidv4(), email, roleType, userName });
                     user = await user.save();
-                    if (roleType === 'user') {
+                    if (roleType === 'regular') {
                         let client = await ClientSchema.findOne({ email });
-                        if (!client && roleType === 'regular') {
+                        if (!client) {
                             client = new ClientSchema({ userId: user.userId, email, userName });
                             client = await client.save();
                             return res.status(200).json(client);
