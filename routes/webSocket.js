@@ -89,15 +89,29 @@ export function initChatWebSocket(server) {
                     { chatId: msg?.chatId },
                     { lastMessage: message.content }
                   );
-                  safeSend(ws, { type: "success", message: message });
+                  const populatedMessage = await Messages.findById(message._id)
+                  .populate({
+                    path: 'chatId',
+                    model: 'Chats',
+                    localField: 'chatId',
+                    foreignField: 'chatId',
+                    justOne: true,
+                    populate: {
+                      path: 'members',
+                      model: 'Users',
+                      localField: 'members',
+                      foreignField: 'userId',
+                      justOne: false,
+                    }
+                  });
+                  console.log("Connected users:", Object.keys(userSockets));
                   if (userSockets[receiverId]) {
                     userSockets[receiverId].forEach(clientWs => {
                       if (clientWs.readyState === clientWs.OPEN) {
-                        const { _id, __v, ...messageWithoutId } = message?._doc || {};
-                        safeSend(clientWs, { message: messageWithoutId });
+                        safeSend(clientWs, { message: populatedMessage });
                       }
                     });
-                  }          
+                  }
               }
           } catch (err) {
             safeSend(ws, { type: "error", error: err?.message || "Failed to send message" });
