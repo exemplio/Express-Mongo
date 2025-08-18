@@ -13,7 +13,7 @@ const chatSchema = new mongoose.Schema({
   },
   createdAt: { type: Date, default: Date.now },
   lastMessage: { type: String, ref: 'Messages' },
-  chatId: { type: String, required: true, unique: true }
+  chatId: { type: String, required: true }
 });
 
 module.exports = mongoose.model('Chats', chatSchema);
