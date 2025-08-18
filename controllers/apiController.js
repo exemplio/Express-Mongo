@@ -265,7 +265,16 @@ class DataController {
                 foreignField: 'userId',
                 justOne: false
             });
-            res.status(200).json(chats);
+            const filteredChats = chats.map(chat => {
+                const filteredMembers = chat.members.filter(
+                    member => member.userId !== req.body.members
+                );
+                return {
+                    ...chat.toObject(),
+                    members: filteredMembers
+                };
+            });
+            res.status(200).json(filteredChats);
         } catch (err) {
             res.status(500).json({ error: err.message });
         }
