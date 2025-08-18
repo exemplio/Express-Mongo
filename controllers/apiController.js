@@ -273,23 +273,27 @@ class DataController {
 
     async getMessages(req, res) {
         try {
-            const { chatId, senderId } = req.query;
+            const { chatId, userId } = req.query;
             if (chatId){
                 if(!validator.isUUID(String(chatId))) {
                     return res.status(400).json({ error: 'Invalid or missing chatId' });
                 }
             }
-            if (senderId) {
-                if (!validator.isUUID(String(senderId))) {
-                    return res.status(400).json({ error: 'Invalid or missing senderId' });
+            if (userId) {
+                if (!validator.isUUID(String(userId))) {
+                    return res.status(400).json({ error: 'Invalid or missing userId' });
                 }
             }
-            if (!chatId && !senderId) {
-                return res.status(400).json({ error: 'At least one of chatId or senderId must be provided' });
+            if (!chatId && !userId) {
+                return res.status(400).json({ error: 'At least one of chatId or userId must be provided' });
             }
-            const filter = {};
-            if (chatId) filter.chatId = chatId;
-            if (senderId) filter.$or = [{ senderId: senderId }, { chatId: chatId }];
+            const orConditions = [];
+            if (chatId) orConditions.push({ chatId });
+            if (userId) {
+                orConditions.push({ senderId: userId });
+                orConditions.push({ receiverId: userId });
+            }
+            const filter = orConditions.length ? { $or: orConditions } : {};
             const raw = await MessageSchema.find(filter)
             .populate({
                 path: 'chatId',
