@@ -256,7 +256,7 @@ class DataController {
         }
     }
 
-    async listChats(req, res) {
+    async listChats(req, res) { 
         try {
             const chats = await ChatSchema.find({ members: req.body.members }).populate({
                 path: 'members',
